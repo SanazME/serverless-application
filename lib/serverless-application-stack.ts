@@ -53,7 +53,15 @@ export class ServerlessApplicationStack extends cdk.Stack {
      * Grant dynamodb write permission to lambda
      */
     table.grantWriteData(rekFn);
-    
+    /**
+     * 
+     */
+    rekFn.addToRolePolicy( new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: ['rekognition:DetectLabels'],
+      resources: ['*']
+    })
+    )
   }
 }
 
