@@ -1,14 +1,14 @@
-import * as cdk from "@aws-cdk/core";
-import * as s3 from "@aws-cdk/aws-s3";
+import * as cdk from '@aws-cdk/core';
+import * as s3 from '@aws-cdk/aws-s3';
 import * as lambda from "@aws-cdk/aws-lambda";
 import * as dynamodb from "@aws-cdk/aws-dynamodb";
 import * as iam from '@aws-cdk/aws-iam';
-import * as event_sources from '@aws-cdk/aws-lambda-event-sources';
-import { CfnOutput, Duration } from "@aws-cdk/core";
-import * as path from 'path';
 import { S3EventSource } from "@aws-cdk/aws-lambda-event-sources";
+import { Duration } from '@aws-cdk/core';
+import * as path from 'path';
 
-const imageBucketName = 'cdk-rek-imagebucket';
+
+const imageBucketName = "cdk-rek-imagebucket";
 
 export class ServerlessApplicationStack extends cdk.Stack {
   constructor(scope: cdk.Construct, id: string, props?: cdk.StackProps) {
@@ -31,8 +31,8 @@ export class ServerlessApplicationStack extends cdk.Stack {
     const rekFn = new lambda.Function(this, 'rekognitionFunction', {
       runtime: lambda.Runtime.PYTHON_3_7,
       handler: 'index.handler',
-      code: lambda.Code.fromAsset(path.join(__dirname, 'rekognitionlambda')),
-      timeout: Duration.seconds(30), 
+      timeout: Duration.seconds(30),
+      code: lambda.Code.fromAsset(path.join(__dirname, '../rekognitionlambda')),
       memorySize: 1024,
       environment: {
         "TABLE": table.tableName,
@@ -53,15 +53,10 @@ export class ServerlessApplicationStack extends cdk.Stack {
      * Grant dynamodb write permission to lambda
      */
     table.grantWriteData(rekFn);
-    /**
-     * 
-     */
     rekFn.addToRolePolicy( new iam.PolicyStatement({
       effect: iam.Effect.ALLOW,
       actions: ['rekognition:DetectLabels'],
       resources: ['*']
-    })
-    )
+    }))    
   }
 }
-
