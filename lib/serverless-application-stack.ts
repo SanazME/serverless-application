@@ -26,13 +26,22 @@ export class ServerlessApplicationStack extends cdk.Stack {
     });
     new cdk.CfnOutput(this, 'ddbTable', {value: table.tableName});   
     /**
+     * Creating a layer for our lambda function
+     */
+    const layer = new lambda.LayerVersion(this, 'reklayer', {
+      code: lambda.Code.fromAsset('reklayer'),
+      compatibleRuntimes: [lambda.Runtime.PYTHON_3_7],
+      license: 'Apache-2.0',
+      description: 'A layer to enable the PIL library in the Rekognition Lambda',
+    });
+    /**
      * Building lambda function; compute for our serverless microservice
      */
     const rekFn = new lambda.Function(this, 'rekognitionFunction', {
       runtime: lambda.Runtime.PYTHON_3_7,
       handler: 'index.handler',
       timeout: Duration.seconds(30),
-      code: lambda.Code.fromAsset(path.join('rekognitionlambda')),
+      code: lambda.Code.fromAsset('rekognitionlambda'),
       memorySize: 1024,
       environment: {
         "TABLE": table.tableName,
