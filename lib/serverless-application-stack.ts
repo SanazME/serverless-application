@@ -32,7 +32,7 @@ export class ServerlessApplicationStack extends cdk.Stack {
       runtime: lambda.Runtime.PYTHON_3_7,
       handler: 'index.handler',
       timeout: Duration.seconds(30),
-      code: lambda.Code.fromAsset(path.join(__dirname, '../rekognitionlambda')),
+      code: lambda.Code.fromAsset(path.join('rekognitionlambda')),
       memorySize: 1024,
       environment: {
         "TABLE": table.tableName,
