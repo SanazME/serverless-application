@@ -55,9 +55,10 @@ export class ServerlessApplicationStack extends cdk.Stack {
       events: [s3.EventType.OBJECT_CREATED]
     }));
     /**
-     * Grant s3 read permission to lambda
+     * Grant s3 read & put permission to lambda
      */
     imageBucket.grantRead(rekFn)
+    imageBucket.grantPut(rekFn)
     /**
      * Grant dynamodb write permission to lambda
      */
