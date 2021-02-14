@@ -43,6 +43,7 @@ export class ServerlessApplicationStack extends cdk.Stack {
       timeout: Duration.seconds(30),
       code: lambda.Code.fromAsset('rekognitionlambda'),
       memorySize: 1024,
+      layers:[layer],
       environment: {
         "TABLE": table.tableName,
         "BUCKET": imageBucket.bucketName
