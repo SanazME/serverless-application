@@ -9,6 +9,7 @@ import * as path from 'path';
 
 
 const imageBucketName = "cdk-rek-imagebucket";
+const resizedBucketName = imageBucketName + '-resized';
 
 export class ServerlessApplicationStack extends cdk.Stack {
   constructor(scope: cdk.Construct, id: string, props?: cdk.StackProps) {
@@ -16,8 +17,19 @@ export class ServerlessApplicationStack extends cdk.Stack {
     /**
      * Image Bucket
      */
-    const imageBucket = new s3.Bucket(this, imageBucketName);
+    const imageBucket = new s3.Bucket(this, imageBucketName, {
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
     new cdk.CfnOutput(this, 'imageBucket', {value: imageBucket.bucketName});
+    
+    /**
+     * Thumbnail (Resized) Bucket
+     */
+    const resizedBucket = new s3.Bucket(this, resizedBucketName, {
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
+    new cdk.CfnOutput(this, 'resizedBucket', {value: resizedBucket.bucketName});
+    
     /**
      * DynamoDB table for storing image labels
      */
