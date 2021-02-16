@@ -58,7 +58,8 @@ export class ServerlessApplicationStack extends cdk.Stack {
       layers:[layer],
       environment: {
         "TABLE": table.tableName,
-        "BUCKET": imageBucket.bucketName
+        "BUCKET": imageBucket.bucketName,
+        "THUMBBUCKET": resizedBucket.bucketName
       }
     })
     /**
