@@ -36,7 +36,7 @@ export class ServerlessApplicationStack extends cdk.Stack {
      * DynamoDB table for storing image labels
      * =================================================================
      */
-    const table = new dynamodb.Table(this, 'ImageLabeles', {
+    const table = new dynamodb.Table(this, 'ImageLabels', {
       partitionKey: {name: 'image', type: dynamodb.AttributeType.STRING},
       removalPolicy: cdk.RemovalPolicy.DESTROY
     });
@@ -65,7 +65,7 @@ export class ServerlessApplicationStack extends cdk.Stack {
       environment: {
         "TABLE": table.tableName,
         "BUCKET": imageBucket.bucketName,
-        "THUMBBUCKET": resizedBucket.bucketName
+        "RESIZEDBUCKET": resizedBucket.bucketName
       }
     })
     /**=================================================================
@@ -103,7 +103,7 @@ export class ServerlessApplicationStack extends cdk.Stack {
       environment: {
         "TABLE": table.tableName,
         "BUCKET": imageBucket.bucketName,
-        "THUMBBUCKET": resizedBucket.bucketName
+        "RESIZEDBUCKET": resizedBucket.bucketName
       }
     })
 

@@ -11,7 +11,7 @@ from boto3.dynamodb.conditions import Key, Attr
 import uuid
 from PIL import Image
 
-thumbBucket = os.environ['THUMBBUCKET']
+thumbBucket = os.environ['RESIZEDBUCKET']
 
 # Set the minimum confidence for Amazon Rekognition
 
@@ -30,8 +30,6 @@ s3_client = boto3.client('s3')
 rekognition_client = boto3.client('rekognition')
 # Constructor for DynamoDB resource object
 dynamodb = boto3.resource('dynamodb')
-
-
 
 def handler(event, context):
 
