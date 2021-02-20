@@ -3,11 +3,11 @@ import * as s3 from "@aws-cdk/aws-s3";
 import * as lambda from "@aws-cdk/aws-lambda";
 import * as dynamodb from "@aws-cdk/aws-dynamodb";
 import * as apigateway from "@aws-cdk/aws-apigateway";
+import { AuthorizationType, PassthroughBehavior } from "@aws-cdk/aws-apigateway";
 import * as iam from "@aws-cdk/aws-iam";
 import { S3EventSource } from "@aws-cdk/aws-lambda-event-sources";
 import { Duration, RemovalPolicy } from "@aws-cdk/core";
 import * as path from "path";
-import { AuthorizationType, PassthroughBehavior } from "@aws-cdk/aws-apigateway";
 
 const imageBucketName = "cdk-rek-imagebucket";
 const resizedBucketName = imageBucketName + "-resized";
@@ -20,7 +20,7 @@ export class ServerlessApplicationStack extends cdk.Stack {
      * =================================================================
      */
     const imageBucket = new s3.Bucket(this, imageBucketName, {
-      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      removalPolicy: RemovalPolicy.DESTROY,
     });
     new cdk.CfnOutput(this, "imageBucket", { value: imageBucket.bucketName });
 
@@ -29,7 +29,7 @@ export class ServerlessApplicationStack extends cdk.Stack {
      * =================================================================
      */
     const resizedBucket = new s3.Bucket(this, resizedBucketName, {
-      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      removalPolicy: RemovalPolicy.DESTROY,
     });
     new cdk.CfnOutput(this, "resizedBucket", {
       value: resizedBucket.bucketName,
@@ -41,7 +41,7 @@ export class ServerlessApplicationStack extends cdk.Stack {
      */
     const table = new dynamodb.Table(this, "ImageLabels", {
       partitionKey: { name: "image", type: dynamodb.AttributeType.STRING },
-      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      removalPolicy: RemovalPolicy.DESTROY,
     });
     new cdk.CfnOutput(this, "ddbTable", { value: table.tableName });
     /**=================================================================
@@ -136,12 +136,12 @@ export class ServerlessApplicationStack extends cdk.Stack {
     const lambdaIntegration = new apigateway.LambdaIntegration(serviceFn, {
       proxy: false,
       requestParameters: {
-        "integration.request.querystring.action":
-        "method.request.querystring.action",
-        "integration.request.querystring.key": "method.request.querystring.key",
+        'integration.request.querystring.action':
+        'method.request.querystring.action',
+        'integration.request.querystring.key': 'method.request.querystring.key',
       },
       requestTemplates: {
-        "application/json": JSON.stringify({
+        'application/json': JSON.stringify({
           action: "$util.escapeJavaScript($input.params('action'))",
           key: "util.escapeJavaScript($input.params('key'))",
         }),
@@ -154,7 +154,7 @@ export class ServerlessApplicationStack extends cdk.Stack {
             // We can map response parameters
             // - Destination parameters (the key) are the response parameters (used in mappings)
             // - Source parameters (the value) are the integration response parameters or expressions
-            "method.response.header.Access-Control-Allow-Origin": "'*'",
+            'method.response.header.Access-Control-Allow-Origin': "'*'",
           },
         },
         {
@@ -162,7 +162,7 @@ export class ServerlessApplicationStack extends cdk.Stack {
           selectionPattern: "(\n|.)+",
           statusCode: "500",
           responseParameters: {
-            "method.response.header.Access-Control-Allow-Origin": "'*'",
+            'method.response.header.Access-Control-Allow-Origin': "'*'",
           },
         },
       ],
