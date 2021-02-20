@@ -1,0 +1,5 @@
+{
+    "TableNames": [
+        "ServerlessApplicationStack-ImageLabeles69CA0E75-1Q6RMV9MCRLSE"
+    ]
+}
