@@ -80,7 +80,7 @@ export class ServerlessApplicationStack extends cdk.Stack {
      * =================================================================
      */
     imageBucket.grantRead(rekFn)
-    imageBucket.grantPut(rekFn)
+    resizedBucket.grantPut(rekFn)
     /**=================================================================
      * Grant dynamodb write permission to lambda
      * =================================================================
