@@ -154,7 +154,7 @@ export class ServerlessApplicationStack extends cdk.Stack {
             // We can map response parameters
             // - Destination parameters (the key) are the response parameters (used in mappings)
             // - Source parameters (the value) are the integration response parameters or expressions
-            "method.request.header.Access-Control-Allow-Origin": "'*'",
+            "method.response.header.Access-Control-Allow-Origin": "'*'",
           },
         },
         {
