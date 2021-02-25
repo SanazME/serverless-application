@@ -3,7 +3,11 @@ import * as s3 from "@aws-cdk/aws-s3";
 import * as lambda from "@aws-cdk/aws-lambda";
 import * as dynamodb from "@aws-cdk/aws-dynamodb";
 import * as apigateway from "@aws-cdk/aws-apigateway";
-import { AuthorizationType, PassthroughBehavior } from "@aws-cdk/aws-apigateway";
+import * as cognito from "@aws-cdk/aws-cognito";
+import {
+  AuthorizationType,
+  PassthroughBehavior,
+} from "@aws-cdk/aws-apigateway";
 import * as iam from "@aws-cdk/aws-iam";
 import { S3EventSource } from "@aws-cdk/aws-lambda-event-sources";
 import { Duration, RemovalPolicy } from "@aws-cdk/core";
@@ -24,6 +28,8 @@ export class ServerlessApplicationStack extends cdk.Stack {
     });
     new cdk.CfnOutput(this, "imageBucket", { value: imageBucket.bucketName });
 
+    const imageBucketArn = imageBucket.bucketArn;
+
     /**=================================================================
      * Thumbnail (Resized) Bucket
      * =================================================================
@@ -34,6 +40,8 @@ export class ServerlessApplicationStack extends cdk.Stack {
     new cdk.CfnOutput(this, "resizedBucket", {
       value: resizedBucket.bucketName,
     });
+
+    const resizedBucketArn = resizedBucket.bucketArn;
 
     /**=================================================================
      * DynamoDB table for storing image labels
@@ -119,11 +127,12 @@ export class ServerlessApplicationStack extends cdk.Stack {
     resizedBucket.grantWrite(serviceFn);
     table.grantReadWriteData(serviceFn);
 
+
     /**=================================================================
      * This construct builds a new Amazon API Gateway with AWS Lambda Integration
      * =================================================================
      */
-    
+
     const api = new apigateway.LambdaRestApi(this, "imageAPi", {
       handler: serviceFn,
       proxy: false,
@@ -132,16 +141,16 @@ export class ServerlessApplicationStack extends cdk.Stack {
         allowMethods: apigateway.Cors.ALL_METHODS,
       },
     });
-    
+
     const lambdaIntegration = new apigateway.LambdaIntegration(serviceFn, {
       proxy: false,
       requestParameters: {
-        'integration.request.querystring.action':
-        'method.request.querystring.action',
-        'integration.request.querystring.key': 'method.request.querystring.key',
+        "integration.request.querystring.action":
+          "method.request.querystring.action",
+        "integration.request.querystring.key": "method.request.querystring.key",
       },
       requestTemplates: {
-        'application/json': JSON.stringify({
+        "application/json": JSON.stringify({
           action: "$util.escapeJavaScript($input.params('action'))",
           key: "util.escapeJavaScript($input.params('key'))",
         }),
@@ -154,7 +163,7 @@ export class ServerlessApplicationStack extends cdk.Stack {
             // We can map response parameters
             // - Destination parameters (the key) are the response parameters (used in mappings)
             // - Source parameters (the value) are the integration response parameters or expressions
-            'method.response.header.Access-Control-Allow-Origin': "'*'",
+            "method.response.header.Access-Control-Allow-Origin": "'*'",
           },
         },
         {
@@ -162,62 +171,186 @@ export class ServerlessApplicationStack extends cdk.Stack {
           selectionPattern: "(\n|.)+",
           statusCode: "500",
           responseParameters: {
-            'method.response.header.Access-Control-Allow-Origin': "'*'",
+            "method.response.header.Access-Control-Allow-Origin": "'*'",
           },
         },
       ],
     });
-    
+
     /**=================================================================
-     * API Gateway 
+     * Cognito User Pool Authentication
+     * =================================================================
+     */
+    const userPool = new cognito.UserPool(this, "UserPool", {
+      selfSignUpEnabled: true, // Allow users to sign up
+      autoVerify: { email: true }, // Verify email address by sending a verification code
+      signInAliases: { email: true, username: true }, // Set email as an alias
+    });
+
+    /**
+     * An app is an entity within a user pool that has permission to call unauthenticated APIs (APIs that do not have an authenticated user), such as APIs to register, sign in, and handle forgotten passwords. To call these APIs, you need an app client ID and an optional client secret.
+     */
+    const userPoolClient = new cognito.UserPoolClient(this, "UserPoolClient", {
+      userPool,
+      generateSecret: false, // Don't need to generate secret for web app running on browsers
+    });
+
+    const identityPool = new cognito.CfnIdentityPool(
+      this,
+      "ImageRekognitionIdentityPool",
+      {
+        allowUnauthenticatedIdentities: false, // Don't allow unauthenticated users
+        cognitoIdentityProviders: [
+          {
+            clientId: userPoolClient.userPoolClientId,
+            providerName: userPool.userPoolProviderName,
+          },
+        ],
+      }
+    );
+
+    const auth = new apigateway.CfnAuthorizer(this, "APIGatewayAuthorizer", {
+      name: "customer-authorizer",
+      identitySource: "method.request.header.Authorization",
+      providerArns: [userPool.userPoolArn],
+      restApiId: api.restApiId,
+      type: AuthorizationType.COGNITO,
+    });
+
+    const authenticatedRole = new iam.Role(
+      this,
+      "ImageRekognitionAuthenticatedRole",
+      {
+        assumedBy: new iam.FederatedPrincipal(
+          "cognito-identity.amazonaws.com",
+          {
+            StringEquals: {
+              "cognito-identity.amazonaws.com:aud": identityPool.ref,
+            },
+            "ForAnyValue:StringLike": {
+              "cognito-identity.amazonaws.com:amr": "authenticated",
+            },
+          },
+          "sts:AssumeRoleWithWebIdentity"
+        ),
+      }
+    );
+
+    // IAM policy granting users permission to upload, download and delete their own pictures
+    authenticatedRole.addToPolicy(
+      new iam.PolicyStatement({
+        actions: ["s3:GetObject", "s3:PutObject"],
+        effect: iam.Effect.ALLOW,
+        resources: [
+          imageBucketArn + "/private/${cognito-identity.amazonaws.com:sub}/*",
+          imageBucketArn + "/private/${cognito-identity.amazonaws.com:sub}",
+          resizedBucketArn + "/private/${cognito-identity.amazonaws.com:sub}/*",
+          resizedBucketArn + "/private/${cognito-identity.amazonaws.com:sub}",
+        ],
+      })
+    );
+
+    // IAM policy granting users permission to list their pictures
+    authenticatedRole.addToPolicy(
+      new iam.PolicyStatement({
+        actions: ["s3:ListBucket"],
+        effect: iam.Effect.ALLOW,
+        resources: [imageBucketArn, resizedBucketArn],
+        conditions: {
+          StringLike: {
+            "s3:prefix": ["private/${cognito-identity.amazonaws.com:sub}/*"],
+          },
+        },
+      })
+    );
+
+    authenticatedRole.addToPolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: [
+          "mobileanalytics:PutEvents",
+          "cognito-sync:*",
+          "cognito-identity:*",
+        ],
+        resources: ["*"],
+      })
+    );
+
+    new cognito.CfnIdentityPoolRoleAttachment(
+      this,
+      "IdentityPoolRoleAttachment",
+      {
+        identityPoolId: identityPool.ref,
+        roles: { authenticated: authenticatedRole.roleArn },
+      }
+    );
+
+    // Export values of Cognito
+    new cdk.CfnOutput(this, "UserPoolId", {
+      value: userPool.userPoolId,
+    });
+    new cdk.CfnOutput(this, "AppClientId", {
+      value: userPoolClient.userPoolClientId,
+    });
+    new cdk.CfnOutput(this, "IdentityPoolId", {
+      value: identityPool.ref,
+    });
+
+
+    /**=================================================================
+     * API Gateway
      * =================================================================
      */
 
-     const imageApi = api.root.addResource('images');
+    const imageApi = api.root.addResource("images");
 
-     // GET /images
-     imageApi.addMethod('GET', lambdaIntegration, {
-       requestParameters: {
-         'method.request.querystring.action':true,
-         'method.request.querystring.key':true
-       },
-       methodResponses: [
-         {
-           statusCode: "200",
-           responseParameters: {
-             'method.response.header.Access-Control-Allow-Origin': true,
-           },
-         },
-         {
-           statusCode: "500",
-           responseParameters: {
-             'method.response.header.Access-Control-Allow-Origin': true,
-           },
-         },
-       ]
-     });
+    // GET /images
+    imageApi.addMethod("GET", lambdaIntegration, {
+      authorizationType: AuthorizationType.COGNITO,
+      authorizer: { authorizerId: auth.ref },
+      requestParameters: {
+        "method.request.querystring.action": true,
+        "method.request.querystring.key": true,
+      },
+      methodResponses: [
+        {
+          statusCode: "200",
+          responseParameters: {
+            "method.response.header.Access-Control-Allow-Origin": true,
+          },
+        },
+        {
+          statusCode: "500",
+          responseParameters: {
+            "method.response.header.Access-Control-Allow-Origin": true,
+          },
+        },
+      ],
+    });
 
-     // DELETE /images
-     imageApi.addMethod('DELETE', lambdaIntegration, {
-       requestParameters: {
-         'method.request.querystring.action':true,
-         'method.request.querystring.key':true
-       },
-       methodResponses: [
-         {
-           statusCode: "200",
-           responseParameters: {
-             'method.response.header.Access-Control-Allow-Origin': true,
-           },
-         },
-         {
-           statusCode: "500",
-           responseParameters: {
-             'method.response.header.Access-Control-Allow-Origin': true,
-           },
-         },
-       ]
-     });
+    // DELETE /images
+    imageApi.addMethod("DELETE", lambdaIntegration, {
+      authorizationType: AuthorizationType.COGNITO,
+      authorizer: { authorizerId: auth.ref },
+      requestParameters: {
+        "method.request.querystring.action": true,
+        "method.request.querystring.key": true,
+      },
+      methodResponses: [
+        {
+          statusCode: "200",
+          responseParameters: {
+            "method.response.header.Access-Control-Allow-Origin": true,
+          },
+        },
+        {
+          statusCode: "500",
+          responseParameters: {
+            "method.response.header.Access-Control-Allow-Origin": true,
+          },
+        },
+      ],
+    });
 
   }
 }
