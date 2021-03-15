@@ -11,10 +11,13 @@ import {
 import * as iam from "@aws-cdk/aws-iam";
 import { S3EventSource } from "@aws-cdk/aws-lambda-event-sources";
 import { Duration, RemovalPolicy } from "@aws-cdk/core";
+import * as s3deploy from "@aws-cdk/aws-s3-deployment";
+import { HttpMethods } from "@aws-cdk/aws-s3";
 import * as path from "path";
 
 const imageBucketName = "cdk-rek-imagebucket";
 const resizedBucketName = imageBucketName + "-resized";
+const websiteBucketName = "cdk-rekn-publicbucket";
 
 export class ServerlessApplicationStack extends cdk.Stack {
   constructor(scope: cdk.Construct, id: string, props?: cdk.StackProps) {
@@ -42,6 +45,45 @@ export class ServerlessApplicationStack extends cdk.Stack {
     });
 
     const resizedBucketArn = resizedBucket.bucketArn;
+
+    /**=================================================================
+     * Construct to create ouS3 Bucket to host our website
+     * =================================================================
+     */
+    const webBucket = new s3.Bucket(this, websiteBucketName, {
+      websiteIndexDocument: "index.html",
+      websiteErrorDocument: "index.html",
+      removalPolicy: RemovalPolicy.DESTROY,
+      // publicReadAccess: true      // exposes the bucket completely public or we can add a policy to expose the bucket for a given condition
+    });
+
+    webBucket.addToResourcePolicy(
+      new iam.PolicyStatement({
+        actions: ["s3:GetObject"],
+        resources: [webBucket.arnForObjects("*")],
+        principals: [new iam.AnyPrincipal()],
+        conditions: {
+          IpAddress: {
+            "aws:SourceIp": [
+              "*.*.*.*/*", // change it to your IP address of from your allowed list
+            ],
+          },
+        },
+      })
+    );
+
+    new cdk.CfnOutput(this, "bucketURL", {
+      value: webBucket.bucketWebsiteDomainName,
+    });
+
+    /**=================================================================
+     * Deploy site contents to S3 bucket
+     * =================================================================
+     */
+    new s3deploy.BucketDeployment(this, "DeployWebsite", {
+      sources: [s3deploy.Source.asset("./public")],
+      destinationBucket: webBucket
+    });
 
     /**=================================================================
      * DynamoDB table for storing image labels
@@ -126,7 +168,6 @@ export class ServerlessApplicationStack extends cdk.Stack {
     imageBucket.grantWrite(serviceFn);
     resizedBucket.grantWrite(serviceFn);
     table.grantReadWriteData(serviceFn);
-
 
     /**=================================================================
      * This construct builds a new Amazon API Gateway with AWS Lambda Integration
@@ -296,7 +337,6 @@ export class ServerlessApplicationStack extends cdk.Stack {
       value: identityPool.ref,
     });
 
-
     /**=================================================================
      * API Gateway
      * =================================================================
@@ -351,6 +391,5 @@ export class ServerlessApplicationStack extends cdk.Stack {
         },
       ],
     });
-
   }
 }

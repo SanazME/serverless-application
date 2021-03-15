@@ -85,6 +85,22 @@
     "@aws-cdk/cx-api" "1.91.0"
     constructs "^3.2.0"
 
+"@aws-cdk/aws-cloudfront@1.91.0":
+  version "1.91.0"
+  resolved "https://registry.yarnpkg.com/@aws-cdk/aws-cloudfront/-/aws-cloudfront-1.91.0.tgz#d1bb024d4e88f8ff0d1d0395ea9e892cc77bbfd0"
+  integrity sha512-Ho/ijKeu8QXJ6ZH3/vJDgFuFJ+T8ugu86AELNNn+M+38pI50g1kkvgmkB2iQ00zbqgvvy0BzsPRz0lLQN0FSIQ==
+  dependencies:
+    "@aws-cdk/aws-certificatemanager" "1.91.0"
+    "@aws-cdk/aws-cloudwatch" "1.91.0"
+    "@aws-cdk/aws-ec2" "1.91.0"
+    "@aws-cdk/aws-iam" "1.91.0"
+    "@aws-cdk/aws-kms" "1.91.0"
+    "@aws-cdk/aws-lambda" "1.91.0"
+    "@aws-cdk/aws-s3" "1.91.0"
+    "@aws-cdk/aws-ssm" "1.91.0"
+    "@aws-cdk/core" "1.91.0"
+    constructs "^3.2.0"
+
 "@aws-cdk/aws-cloudwatch@1.91.0":
   version "1.91.0"
   resolved "https://registry.yarnpkg.com/@aws-cdk/aws-cloudwatch/-/aws-cloudwatch-1.91.0.tgz#72eb134ead8100516cf614f597ece8e15589ef76"
@@ -320,6 +336,21 @@
     "@aws-cdk/cx-api" "1.91.0"
     constructs "^3.2.0"
 
+"@aws-cdk/aws-s3-deployment@^1.91.0":
+  version "1.91.0"
+  resolved "https://registry.yarnpkg.com/@aws-cdk/aws-s3-deployment/-/aws-s3-deployment-1.91.0.tgz#616460273d27a0c2a79760d3d1a4eb2d43786c7b"
+  integrity sha512-qx7J1FVnL+WrYw6T5n3hEjDMvhdC2Ixk9fgBBsmV1jGkULnCUCvup0SDEMflmJpyccGl8XRSoqYn9xH7e6Fv5A==
+  dependencies:
+    "@aws-cdk/aws-cloudfront" "1.91.0"
+    "@aws-cdk/aws-ec2" "1.91.0"
+    "@aws-cdk/aws-iam" "1.91.0"
+    "@aws-cdk/aws-lambda" "1.91.0"
+    "@aws-cdk/aws-s3" "1.91.0"
+    "@aws-cdk/aws-s3-assets" "1.91.0"
+    "@aws-cdk/core" "1.91.0"
+    "@aws-cdk/lambda-layer-awscli" "1.91.0"
+    constructs "^3.2.0"
+
 "@aws-cdk/aws-s3-notifications@1.91.0":
   version "1.91.0"
   resolved "https://registry.yarnpkg.com/@aws-cdk/aws-s3-notifications/-/aws-s3-notifications-1.91.0.tgz#687ea2b4182e2dc727cc9f0fcebc30f7a241a156"
@@ -484,6 +515,15 @@
   dependencies:
     "@aws-cdk/cloud-assembly-schema" "1.91.0"
     semver "^7.3.4"
+
+"@aws-cdk/lambda-layer-awscli@1.91.0":
+  version "1.91.0"
+  resolved "https://registry.yarnpkg.com/@aws-cdk/lambda-layer-awscli/-/lambda-layer-awscli-1.91.0.tgz#464fff30786366c43d68a253b8d17e71c4777ccc"
+  integrity sha512-swfUPdBqYZk3ZzEH4qIjDlZIL6iH/1JhGhpOsx08m9p8uSUhX+hBt59QhgqItQNIs53IvlPov8SlsPzy3Yhy2A==
+  dependencies:
+    "@aws-cdk/aws-lambda" "1.91.0"
+    "@aws-cdk/core" "1.91.0"
+    constructs "^3.2.0"
 
 "@aws-cdk/region-info@1.90.0":
   version "1.90.0"
