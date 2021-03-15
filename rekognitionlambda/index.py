@@ -10,6 +10,7 @@ from urllib.parse import unquote_plus
 from boto3.dynamodb.conditions import Key, Attr
 import uuid
 from PIL import Image
+import json
 
 thumbBucket = os.environ['RESIZEDBUCKET']
 
