@@ -9,9 +9,11 @@ import {
   PassthroughBehavior,
 } from "@aws-cdk/aws-apigateway";
 import * as iam from "@aws-cdk/aws-iam";
-import { S3EventSource } from "@aws-cdk/aws-lambda-event-sources";
 import { Duration, RemovalPolicy } from "@aws-cdk/core";
 import * as s3deploy from "@aws-cdk/aws-s3-deployment";
+import * as sqs from "@aws-cdk/aws-sqs";
+import * as s3n from "@aws-cdk/aws-s3-notifications";
+import * as event_source from "@aws-cdk/aws-lambda-event-sources";
 import { HttpMethods } from "@aws-cdk/aws-s3";
 import * as path from "path";
 
@@ -82,7 +84,7 @@ export class ServerlessApplicationStack extends cdk.Stack {
      */
     new s3deploy.BucketDeployment(this, "DeployWebsite", {
       sources: [s3deploy.Source.asset("./public")],
-      destinationBucket: webBucket
+      destinationBucket: webBucket,
     });
 
     /**=================================================================
@@ -122,15 +124,6 @@ export class ServerlessApplicationStack extends cdk.Stack {
         RESIZEDBUCKET: resizedBucket.bucketName,
       },
     });
-    /**=================================================================
-     * Lambda can read from S3 event source when the obj is created in s3
-     * =================================================================
-     */
-    rekFn.addEventSource(
-      new S3EventSource(imageBucket, {
-        events: [s3.EventType.OBJECT_CREATED],
-      })
-    );
     /**=================================================================
      * Grant s3 read & put permission to lambda
      * =================================================================
@@ -391,5 +384,35 @@ export class ServerlessApplicationStack extends cdk.Stack {
         },
       ],
     });
+
+    /**=================================================================
+     * Building SQS queue and DeadLetter Queue
+     * =================================================================
+     */
+    const dlQueue = new sqs.Queue(this, "ImageDLQueue", {
+      queueName: "ImageDLQueue",
+    });
+
+    const queue = new sqs.Queue(this, "ImageQueue", {
+      queueName: "ImageQueue",
+      visibilityTimeout: cdk.Duration.seconds(30),
+      receiveMessageWaitTime: cdk.Duration.seconds(20),
+      deadLetterQueue: {
+        maxReceiveCount: 2,
+        queue: dlQueue,
+      },
+    });
+    /**=================================================================
+     * Building S3 Bucket Create Notificatino to SQS
+     * =================================================================
+     */
+    imageBucket.addObjectCreatedNotification(new s3n.SqsDestination(queue), {
+      prefix: "private/",
+    });
+    /**=================================================================
+     * Lambda(Rekognition) to consume messages from SQS
+     * =================================================================
+     */
+    rekFn.addEventSource(new event_source.SqsEventSource(queue));
   }
 }
