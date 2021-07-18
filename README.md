@@ -1,8 +1,10 @@
-# Welcome to your CDK TypeScript project!
+# Cloud native distributed application for uploading & processing photos
 
-This is a blank project for TypeScript development with CDK.
+## Architecture
 
-The `cdk.json` file tells the CDK Toolkit how to execute your app.
+![Alt text](UploadPhotoApp.png?raw=true "Title")
+
+
 
 ## Useful commands
 
